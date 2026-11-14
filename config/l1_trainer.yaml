@@ -1,0 +1,27 @@
+# verl's ppo_trainer, plus what L1 adds: its reward manager and reward_config.
+# Every other setting is in scripts/train/run_l1_*.sh, as in L1.
+
+hydra:
+  searchpath:
+    - pkg://verl.trainer.config
+
+defaults:
+  - ppo_trainer
+  - _self_
+
+data:
+  apply_chat_template_kwargs:
+    enable_thinking: true   # Qwen3.5's small models think only if asked
+
+reward:
+  reward_manager:
+    source: importlib
+    name: RewardManager
+    module:
+      path: pkg://reward_manager
+
+reward_config:
+  alpha: 0.01
+  sigmoid_reward: False
+  linear_reward: False
+  multiplier_reward: False

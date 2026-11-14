@@ -1,0 +1,16 @@
+#!/bin/bash
+# Download the models the runs use into the HF cache.
+# Run once per cluster on its login node: cluv run <cluster> bash scripts/prefetch.sh
+set -uo pipefail
+export PATH="$HOME/.local/bin:$PATH" HF_HUB_DISABLE_XET=1
+
+MODELS="Qwen/Qwen3.5-4B Qwen/Qwen3.5-2B"
+
+for model in $MODELS; do
+  if uvx --quiet --from huggingface_hub hf download "$model" --quiet >/dev/null; then
+    echo "model $model ok"
+  else
+    echo "model $model FAILED"
+  fi
+done
+echo "hf cache $(du -sh "$HOME/.cache/huggingface" | cut -f1)"

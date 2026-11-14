@@ -1,0 +1,92 @@
+[project]
+name = "mila-l1"
+version = "0.1.0"
+description = "L1 (Aggarwal & Welleck, 2025) on verl 0.9, vLLM 0.24, transformers 5 and Qwen3.5."
+readme = "README.md"
+requires-python = "==3.12.*"
+dependencies = [
+    "verl[math]==0.9.1",
+    "pylatexenc",
+    "sympy",
+    "tabulate",
+    "pandas",
+    # verl's training stack (vLLM rollouts, FSDP training), on Linux only, so a
+    # plain `uv sync` installs it on the clusters
+    "verl[vllm,fsdp]==0.9.1; sys_platform == 'linux'",
+    "flash-attn==2.8.3; sys_platform == 'linux'",
+    "torch==2.11.0; sys_platform == 'linux'",
+    "torchvision==0.26.0; sys_platform == 'linux'",
+    "torchaudio==2.11.0; sys_platform == 'linux'",
+]
+
+[dependency-groups]
+dev = ["pytest>=8.2"]
+
+[tool.uv]
+package = false
+# uv's own Python, in $HOME: the clusters' system Pythons are missing on compute
+# nodes (Mila) or build C extensions with mismatched toolchains (Killarney, TamIA)
+python-preference = "only-managed"
+# verl 0.9.1's own pins (its pyproject.toml).
+override-dependencies = [
+    "transformers==5.9.0",
+    "numpy>=2.0.0",
+    "kernels>=0.12.0,<0.13",
+    "flash-attn-4 ; platform_machine == 'flash-attn-4-excluded'",
+    "nvidia-cusparselt-cu13==0.8.0 ; platform_machine == 'x86_64' and sys_platform == 'linux'",
+]
+
+[tool.uv.sources]
+flash-attn = { url = "https://github.com/verl-project/verl-wheelhouse/releases/download/flash-attention-v2.8.3-py3.12-torch2.11.0/flash_attn-2.8.3-cp312-cp312-linux_x86_64.whl", marker = "sys_platform == 'linux'" }
+torch = [{ index = "pytorch-cu130", marker = "sys_platform == 'linux'" }]
+torchvision = [{ index = "pytorch-cu130", marker = "sys_platform == 'linux'" }]
+torchaudio = [{ index = "pytorch-cu130", marker = "sys_platform == 'linux'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true
+
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+# cluv runs the same job on every cluster; full fine-tuning takes four GPUs.
+[tool.cluv]
+job_script_path = "scripts/job.sh"
+project_dir = "$SCRATCH/mila_l1"
+results_path = "$SCRATCH/logs/mila_l1"
+results_symlink = "logs"
+
+[tool.cluv.env]
+UV_OFFLINE = "1"
+HF_HUB_OFFLINE = "1"
+WANDB_MODE = "online"
+
+[tool.cluv.sbatch_args]
+requeue = true
+
+[tool.cluv.clusters.mila]
+sbatch_args = { partition = "long", gpus = "l40s:4", cpus-per-gpu = 12, mem-per-gpu = "250G" }
+
+[tool.cluv.clusters.killarney]
+sbatch_args = { account = "aip-courvill", gpus = "l40s:4", cpus-per-gpu = 16, mem-per-gpu = "125G" }
+
+[tool.cluv.clusters.fir]
+sbatch_args = { account = "rrg-bengioy-ad", gpus = "h100:4", cpus-per-gpu = 12, mem-per-gpu = "280G" }
+
+[tool.cluv.clusters.rorqual]
+env = { WANDB_MODE = "offline" }
+sbatch_args = { account = "rrg-bengioy-ad", gpus = "h100:4", cpus-per-gpu = 16, mem-per-gpu = "124G" }
+
+[tool.cluv.clusters.nibi]
+sbatch_args = { account = "rrg-bengioy-ad", gpus = "h100:4", cpus-per-gpu = 14, mem-per-gpu = "250G" }
+
+[tool.cluv.clusters.trillium-gpu]
+env = { WANDB_MODE = "offline" }
+sbatch_args = { account = "rrg-bengioy-ad", gpus-per-node = 4 }
+
+[tool.cluv.clusters.tamia]
+env = { WANDB_MODE = "offline" }
+sbatch_args = { account = "aip-courvill", gpus = "h100:4", cpus-per-gpu = 12, mem-per-gpu = "120G" }
