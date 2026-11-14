@@ -66,6 +66,7 @@ WANDB_MODE = "online"
 
 [tool.cluv.sbatch_args]
 requeue = true
+nodes = 1
 
 [tool.cluv.clusters.mila]
 sbatch_args = { partition = "long", gpus = "l40s:4", cpus-per-gpu = 12, mem-per-gpu = "250G" }
